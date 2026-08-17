@@ -1,0 +1,38 @@
+from collections.abc import Sequence
+from uuid import NAMESPACE_URL, uuid5
+from qdrant_client import QdrantClient
+from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
+from .schema import vector_params
+
+class VectorStore:
+    def __init__(self, url: str, api_key: str | None, collection_name: str) -> None:
+        self.client = QdrantClient(url=url, api_key=api_key)
+        self.collection_name = collection_name
+
+    def ensure_collection(self, dimension: int) -> None:
+        if not self.client.collection_exists(self.collection_name):
+            self.client.create_collection(self.collection_name, vectors_config=vector_params(dimension))
+
+    def upsert_passages(self, passages: Sequence[dict], vectors: Sequence[Sequence[float]]) -> None:
+        if len(passages) != len(vectors):
+            raise ValueError("Chaque passage doit posséder un vecteur.")
+        points = [PointStruct(id=str(uuid5(NAMESPACE_URL, p["passage_id"])), vector=list(v), payload=p) for p, v in zip(passages, vectors)]
+        if points:
+            self.client.upsert(collection_name=self.collection_name, points=points, wait=True)
+
+    def search(self, query_vector: Sequence[float], limit: int, category: str | None = None):
+        query_filter = Filter(must=[FieldCondition(key="category", match=MatchValue(value=category))]) if category else None
+        return self.client.query_points(collection_name=self.collection_name, query=list(query_vector), query_filter=query_filter, limit=limit, with_payload=True).points
+
+    def list_documents(self) -> list[dict]:
+        records, _ = self.client.scroll(self.collection_name, with_payload=True, with_vectors=False, limit=1000)
+        documents = {}
+        for record in records:
+            payload = record.payload or {}
+            if payload.get("document_id"):
+                documents.setdefault(payload["document_id"], {key: payload.get(key) for key in ("document_id", "title", "category", "source")})
+        return list(documents.values())
+
+    def delete_document(self, document_id: str) -> None:
+        selector = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))])
+        self.client.delete(collection_name=self.collection_name, points_selector=selector, wait=True)

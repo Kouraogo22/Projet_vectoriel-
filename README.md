@@ -24,3 +24,16 @@ La documentation interactive de l'API est disponible sur `http://127.0.0.1:8000/
 ```bash
 pytest
 ```
+
+## Données et expérimentation
+
+Les expérimentations de recherche sémantique utilisent le corpus français **FQuADRetrieval**, téléchargé depuis Hugging Face dans `data/raw/fquad_retrieval`. Il contient 366 documents, 500 requêtes et 500 jugements de pertinence, ce qui permet de calculer Recall@k et MRR@k.
+
+Lancez Jupyter depuis la racine du projet :
+
+```bash
+jupyter notebook
+```
+
+- `notebooks/exploration.ipynb` vérifie le corpus et affiche les résultats d'une recherche française.
+- `notebooks/evaluation.ipynb` produit les métriques et enregistre `evaluation/results/fquad_metrics.csv`.

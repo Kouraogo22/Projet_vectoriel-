@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from api.routes import documents, search
 from src.config import settings
 from src.database import VectorStore
@@ -12,6 +12,13 @@ app.state.retriever = SemanticRetriever(app.state.store, EmbeddingEncoder(settin
 @app.get("/", tags=["Santé"])
 def home() -> dict[str, str]:
     return {"message": "API de recherche sémantique opérationnelle"}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> Response:
+    """Évite une erreur 404 lorsque le navigateur demande l'icône du site."""
+    return Response(status_code=204)
+
 
 @app.get("/health", tags=["Santé"])
 def health() -> dict[str, str]:

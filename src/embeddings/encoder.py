@@ -14,7 +14,7 @@ class EmbeddingEncoder:
 
     @property
     def dimension(self) -> int:
-        return int(self.model.get_sentence_embedding_dimension())
+        return int(self.model.get_embedding_dimension())
 
     def encode(self, texts: str | Sequence[str], batch_size: int = 32):
         return self.model.encode(texts, batch_size=batch_size, normalize_embeddings=True, show_progress_bar=False)

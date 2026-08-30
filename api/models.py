@@ -4,6 +4,8 @@ class SearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     limit: int = Field(default=5, ge=1, le=20)
     category: str | None = Field(default=None, max_length=120)
+    categories: list[str] | None = None
+    document_ids: list[str] | None = None
 
 class SearchResult(BaseModel):
     score: float

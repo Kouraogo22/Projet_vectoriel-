@@ -23,8 +23,26 @@ class SemanticRetriever:
         self.store.upsert_passages(passages, vectors)
         return document_id, len(passages)
 
-    def search(self, query: str, limit: int = 5, category: str | None = None) -> list[dict]:
+    def search(
+        self,
+        query: str,
+        limit: int = 5,
+        category: str | None = None,
+        categories: list[str] | None = None,
+        document_ids: list[str] | None = None,
+    ) -> list[dict]:
         if not query.strip():
             raise ValueError("La requête ne peut pas être vide.")
         self.store.ensure_collection(self.encoder.dimension)
-        return [{"score": result.score, **(result.payload or {})} for result in self.store.search(self.encoder.encode(query), limit, category)]
+        selected_categories = list(categories or [])
+        if category and category not in selected_categories:
+            selected_categories.append(category)
+        return [
+            {"score": result.score, **(result.payload or {})}
+            for result in self.store.search(
+                self.encoder.encode(query),
+                limit,
+                categories=selected_categories or None,
+                document_ids=document_ids,
+            )
+        ]

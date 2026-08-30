@@ -7,6 +7,21 @@ st.set_page_config(page_title="Recherche sémantique", layout="wide")
 st.title("Recherche sémantique de documents")
 st.caption("Interrogez les documents indexés à partir de leur sens.")
 
+st.session_state.setdefault("search_results", [])
+st.session_state.setdefault("last_search_query", "")
+
+
+@st.cache_data(ttl=60)
+def fetch_documents() -> list[dict]:
+    response = requests.get(f"{API_URL}/documents", timeout=20)
+    response.raise_for_status()
+    return response.json()
+
+
+def reset_result_filters() -> None:
+    for key in ("result_min_score", "result_categories", "result_documents", "result_text"):
+        st.session_state.pop(key, None)
+
 @st.dialog("Ajouter un document", width="large", icon=":material/upload_file:")
 def import_document_dialog() -> None:
     st.caption("Formats acceptés : PDF, DOCX, TXT et Markdown.")
@@ -48,6 +63,7 @@ def import_document_dialog() -> None:
         st.session_state.import_feedback = (
             f"Document indexé : {indexed['chunks_indexed']} passage(s) ajouté(s)."
         )
+        fetch_documents.clear()
         st.rerun()
     except requests.RequestException as exc:
         status.update(label="Échec de l'indexation", state="error", expanded=True)
@@ -63,11 +79,37 @@ if feedback := st.session_state.pop("import_feedback", None):
     st.success(feedback)
 
 st.subheader("Rechercher dans les documents")
+try:
+    indexed_documents = fetch_documents()
+except requests.RequestException:
+    indexed_documents = []
+    st.info("Les filtres par document seront disponibles dès que l'API sera accessible.")
+
+available_categories = sorted(
+    {document["category"] for document in indexed_documents if document.get("category")}
+)
+document_labels = {
+    f"{document['title']} — {document['document_id'][:8]}": document["document_id"]
+    for document in indexed_documents
+}
+
 with st.form("semantic_search"):
     query = st.text_input("Saisissez votre requête", placeholder="Exemple : fonctionnement d'une base vectorielle")
-    limit = st.slider("Nombre de résultats", min_value=1, max_value=20, value=5)
-    category = st.text_input("Filtrer par catégorie (facultatif)")
-    search_submitted = st.form_submit_button("Rechercher", type="primary")
+    limit = st.slider("Nombre de résultats à récupérer", min_value=1, max_value=20, value=5)
+    with st.expander("Filtres avant la recherche", expanded=True):
+        pre_categories = st.multiselect(
+            "Catégories à interroger",
+            options=available_categories,
+            placeholder="Toutes les catégories",
+            help="La recherche ne sera exécutée que sur les passages des catégories choisies.",
+        )
+        pre_documents = st.multiselect(
+            "Documents à interroger",
+            options=list(document_labels),
+            placeholder="Tous les documents indexés",
+            help="Vous pouvez limiter la recherche à un ou plusieurs documents précis.",
+        )
+    search_submitted = st.form_submit_button("Rechercher", type="primary", icon=":material/search:")
 
 if search_submitted and query.strip():
     status = st.status("Recherche sémantique en cours...", expanded=True)
@@ -77,22 +119,97 @@ if search_submitted and query.strip():
             st.write("Interrogation de la base vectorielle.")
             response = requests.post(
                 f"{API_URL}/search",
-                json={"query": query, "limit": limit, "category": category or None},
+                json={
+                    "query": query.strip(),
+                    "limit": limit,
+                    "categories": pre_categories or None,
+                    "document_ids": [document_labels[label] for label in pre_documents] or None,
+                },
                 timeout=60,
             )
             response.raise_for_status()
             results = response.json()["results"]
             st.write("Classement des résultats terminé.")
         status.update(label="Recherche terminée", state="complete", expanded=False)
-        if not results:
-            st.warning("Aucun résultat trouvé.")
-        for index, result in enumerate(results, 1):
-            st.subheader(f"Résultat {index} — score : {result['score']:.4f}")
-            st.write(result["text"])
-            st.caption(f"Document : {result['title']}")
-            st.divider()
+        st.session_state.search_results = results
+        st.session_state.last_search_query = query.strip()
+        reset_result_filters()
     except requests.RequestException as exc:
         status.update(label="Échec de la recherche", state="error", expanded=True)
         st.error(f"L'API est indisponible : {exc}")
 elif search_submitted:
     st.warning("Saisissez une requête avant de lancer la recherche.")
+
+
+results = st.session_state.search_results
+if results:
+    st.subheader("Résultats de la recherche")
+    st.caption(f"Requête exécutée : « {st.session_state.last_search_query} »")
+
+    result_categories = sorted({result["category"] for result in results if result.get("category")})
+    result_labels = {
+        f"{result['title']} — {result['document_id'][:8]}": result["document_id"]
+        for result in results
+    }
+    lowest_score = min(float(result["score"]) for result in results)
+    highest_score = max(float(result["score"]) for result in results)
+
+    with st.expander("Affiner les résultats obtenus", expanded=True):
+        st.caption("Ces filtres s'appliquent immédiatement aux résultats affichés et ne relancent pas la recherche sémantique.")
+        result_min_score = st.number_input(
+            "Score minimal",
+            min_value=lowest_score,
+            max_value=highest_score,
+            value=lowest_score,
+            step=0.01,
+            format="%.4f",
+            key="result_min_score",
+        )
+        selected_result_categories = st.multiselect(
+            "Catégories des résultats",
+            options=result_categories,
+            placeholder="Toutes les catégories",
+            key="result_categories",
+        )
+        selected_result_documents = st.multiselect(
+            "Documents des résultats",
+            options=list(result_labels),
+            placeholder="Tous les documents",
+            key="result_documents",
+        )
+        result_text = st.text_input(
+            "Mot ou expression dans le résultat",
+            placeholder="Exemple : vecteur",
+            key="result_text",
+        )
+        st.button(
+            "Réinitialiser les filtres",
+            icon=":material/filter_alt_off:",
+            on_click=reset_result_filters,
+        )
+
+    selected_document_ids = {result_labels[label] for label in selected_result_documents}
+    refined_results = [
+        result
+        for result in results
+        if float(result["score"]) >= result_min_score
+        and (not selected_result_categories or result.get("category") in selected_result_categories)
+        and (not selected_document_ids or result.get("document_id") in selected_document_ids)
+        and (
+            not result_text.strip()
+            or result_text.strip().casefold() in result.get("text", "").casefold()
+            or result_text.strip().casefold() in result.get("title", "").casefold()
+        )
+    ]
+
+    st.caption(f"{len(refined_results)} résultat(s) affiché(s) sur {len(results)} résultat(s) récupéré(s).")
+    if not refined_results:
+        st.warning("Aucun résultat ne correspond aux filtres appliqués.")
+    for index, result in enumerate(refined_results, 1):
+        st.subheader(f"Résultat {index} — score : {result['score']:.4f}")
+        st.write(result["text"])
+        category_label = result.get("category") or "Sans catégorie"
+        st.caption(f"Document : {result['title']} · Catégorie : {category_label}")
+        st.divider()
+elif st.session_state.last_search_query:
+    st.warning("Aucun résultat trouvé pour cette requête et les filtres appliqués.")

@@ -30,3 +30,12 @@ class DocumentSummary(BaseModel):
     title: str
     category: str | None = None
     source: str | None = None
+
+
+class DocumentContent(DocumentSummary):
+    """Contenu reconstitué à partir des passages indexés d'un document."""
+
+    content: str
+    chunks_indexed: int
+    original_filename: str
+    original_available: bool

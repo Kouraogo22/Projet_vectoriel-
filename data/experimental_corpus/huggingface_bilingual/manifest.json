@@ -1,0 +1,439 @@
+{
+  "corpus_name": "huggingface_bilingual",
+  "purpose": "Importation via l’interface Streamlit et expérimentation de la recherche sémantique.",
+  "document_count": 20,
+  "languages": {
+    "fr": 8,
+    "en": 12
+  },
+  "entries": [
+    {
+      "file": "en/news/ag_news_0_1_actualites-internationales.txt",
+      "sha256": "c40c830e457fe88736ff72a75d5e59a590b3ed710e2467244f84637d46e128b4",
+      "word_count": 46,
+      "title": "AG News — Actualités internationales 1",
+      "language": "en",
+      "domain": "Actualités internationales",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 492,
+      "source_label": 0
+    },
+    {
+      "file": "en/news/ag_news_0_2_actualites-internationales.txt",
+      "sha256": "13473ed6ee36a99bb2853b718e7e7485392ea8bf2918199279868066852631c1",
+      "word_count": 38,
+      "title": "AG News — Actualités internationales 2",
+      "language": "en",
+      "domain": "Actualités internationales",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 493,
+      "source_label": 0
+    },
+    {
+      "file": "en/news/ag_news_1_1_sport.txt",
+      "sha256": "94dc47af5a269437a23554cb728889e0ee03a868af65bd19c8c35a68fc6aa05a",
+      "word_count": 64,
+      "title": "AG News — Sport 1",
+      "language": "en",
+      "domain": "Sport",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 448,
+      "source_label": 1
+    },
+    {
+      "file": "en/news/ag_news_1_2_sport.txt",
+      "sha256": "79e1e3288d363c1fe53d6050d9067437af2b5ce05b12fdf1e814add88466414a",
+      "word_count": 59,
+      "title": "AG News — Sport 2",
+      "language": "en",
+      "domain": "Sport",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 449,
+      "source_label": 1
+    },
+    {
+      "file": "en/news/ag_news_2_1_economie-et-entreprises.txt",
+      "sha256": "6e7a98c3686d033b5d1768570a9ddcc20e05b4825ba069182f689d67c5893c04",
+      "word_count": 21,
+      "title": "AG News — Économie et entreprises 1",
+      "language": "en",
+      "domain": "Économie et entreprises",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 0,
+      "source_label": 2
+    },
+    {
+      "file": "en/news/ag_news_2_2_economie-et-entreprises.txt",
+      "sha256": "c05d4fdd191f269f7e736eec4c6db65b2a75e2a2769b01b7b0f2fa4a5be190c8",
+      "word_count": 36,
+      "title": "AG News — Économie et entreprises 2",
+      "language": "en",
+      "domain": "Économie et entreprises",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 1,
+      "source_label": 2
+    },
+    {
+      "file": "en/news/ag_news_3_1_sciences-et-technologies.txt",
+      "sha256": "a4d5eb3d0d9abb18e7629716e122f99da207a599c7d1c4adb14de0a20d4e0250",
+      "word_count": 53,
+      "title": "AG News — Sciences et technologies 1",
+      "language": "en",
+      "domain": "Sciences et technologies",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 78,
+      "source_label": 3
+    },
+    {
+      "file": "en/news/ag_news_3_2_sciences-et-technologies.txt",
+      "sha256": "d3ef5e326bd55549d118e9605d5af8df12b99175a6f8910eb0334b80a91d5a7f",
+      "word_count": 43,
+      "title": "AG News — Sciences et technologies 2",
+      "language": "en",
+      "domain": "Sciences et technologies",
+      "document_type": "Brève d’actualité",
+      "source": {
+        "dataset": "fancyzhx/ag_news",
+        "url": "https://huggingface.co/datasets/fancyzhx/ag_news",
+        "file": "data/train-00000-of-00001.parquet",
+        "revision": "eb185aade064a813bc0b7f42de02595523103ca4",
+        "split": "train",
+        "language": "en",
+        "license": "unknown (à vérifier auprès des détenteurs des dépêches sources)",
+        "local_file": "ag_news_train.parquet"
+      },
+      "source_row": 79,
+      "source_label": 3
+    },
+    {
+      "file": "en/health/pubmedqa_21645374.txt",
+      "sha256": "dcfbce45d14870834ca02dd735f43c99c98e97e88696993ae6124f930d961f62",
+      "word_count": 368,
+      "title": "PubMedQA — publication 21645374",
+      "language": "en",
+      "domain": "Santé et biomédecine",
+      "document_type": "Résumé d’article biomédical",
+      "source": {
+        "dataset": "qiaojin/PubMedQA",
+        "url": "https://huggingface.co/datasets/qiaojin/PubMedQA",
+        "file": "pqa_labeled/train-00000-of-00001.parquet",
+        "revision": "9001f2853fb87cab8d220904e0de81ac6973b318",
+        "split": "train",
+        "language": "en",
+        "license": "MIT",
+        "local_file": "pubmedqa_labeled_train.parquet"
+      },
+      "source_row": 0,
+      "pubmed_id": 21645374,
+      "mesh_terms": "Alismataceae, Apoptosis, Cell Differentiation, Mitochondria, Plant Leaves"
+    },
+    {
+      "file": "en/health/pubmedqa_16418930.txt",
+      "sha256": "96f46c2a9e7d2e8270cc688ec49e3046d0c9c22ca32a701ae779fb82577db43b",
+      "word_count": 299,
+      "title": "PubMedQA — publication 16418930",
+      "language": "en",
+      "domain": "Santé et biomédecine",
+      "document_type": "Résumé d’article biomédical",
+      "source": {
+        "dataset": "qiaojin/PubMedQA",
+        "url": "https://huggingface.co/datasets/qiaojin/PubMedQA",
+        "file": "pqa_labeled/train-00000-of-00001.parquet",
+        "revision": "9001f2853fb87cab8d220904e0de81ac6973b318",
+        "split": "train",
+        "language": "en",
+        "license": "MIT",
+        "local_file": "pubmedqa_labeled_train.parquet"
+      },
+      "source_row": 1,
+      "pubmed_id": 16418930,
+      "mesh_terms": "Adolescent, Adult, Aged, Aged, 80 and over, Amblyopia, Cataract"
+    },
+    {
+      "file": "en/health/pubmedqa_22564465.txt",
+      "sha256": "91b697c7591bf91e7532074b2fc502deaf99bbe9a5b2602ac9eb767c41307aea",
+      "word_count": 255,
+      "title": "PubMedQA — publication 22564465",
+      "language": "en",
+      "domain": "Santé et biomédecine",
+      "document_type": "Résumé d’article biomédical",
+      "source": {
+        "dataset": "qiaojin/PubMedQA",
+        "url": "https://huggingface.co/datasets/qiaojin/PubMedQA",
+        "file": "pqa_labeled/train-00000-of-00001.parquet",
+        "revision": "9001f2853fb87cab8d220904e0de81ac6973b318",
+        "split": "train",
+        "language": "en",
+        "license": "MIT",
+        "local_file": "pubmedqa_labeled_train.parquet"
+      },
+      "source_row": 100,
+      "pubmed_id": 22564465,
+      "mesh_terms": "Aged, Breast Neoplasms, Cohort Studies, Ethnic Groups, Female, Humans"
+    },
+    {
+      "file": "en/health/pubmedqa_23588461.txt",
+      "sha256": "0f03e971c6631a251c27cf972a199ffc523ade970211bb4a3344257bb2444be2",
+      "word_count": 258,
+      "title": "PubMedQA — publication 23588461",
+      "language": "en",
+      "domain": "Santé et biomédecine",
+      "document_type": "Résumé d’article biomédical",
+      "source": {
+        "dataset": "qiaojin/PubMedQA",
+        "url": "https://huggingface.co/datasets/qiaojin/PubMedQA",
+        "file": "pqa_labeled/train-00000-of-00001.parquet",
+        "revision": "9001f2853fb87cab8d220904e0de81ac6973b318",
+        "split": "train",
+        "language": "en",
+        "license": "MIT",
+        "local_file": "pubmedqa_labeled_train.parquet"
+      },
+      "source_row": 300,
+      "pubmed_id": 23588461,
+      "mesh_terms": "Adult, Anthropometry, Ascites, Ascitic Fluid, Blood Chemical Analysis, Cohort Studies"
+    },
+    {
+      "file": "fr/news/frenchqa_actualite_1.txt",
+      "sha256": "d3c851fbb564c7d1350caa8f2c74afd21a7419dec8a795f7534b6797e6999b1a",
+      "word_count": 33,
+      "title": "FrenchQA — actualité 1",
+      "language": "fr",
+      "domain": "Actualités et société",
+      "document_type": "Extrait d’actualité avec question associée",
+      "source": {
+        "dataset": "CATIE-AQ/frenchQA",
+        "url": "https://huggingface.co/datasets/CATIE-AQ/frenchQA",
+        "file": "data/validation-00000-of-00001.parquet",
+        "revision": "39b678ad23eef447fb6eda390b17388ae8457718",
+        "split": "validation",
+        "language": "fr",
+        "license": "CC BY 4.0",
+        "local_file": "frenchqa_validation.parquet"
+      },
+      "source_row": "0",
+      "upstream_source": "lincoln/newsquadfr"
+    },
+    {
+      "file": "fr/news/frenchqa_actualite_2.txt",
+      "sha256": "3899448c35396dd047539c0496abb2ede4a28570375c2edcc1af748d229905f7",
+      "word_count": 46,
+      "title": "FrenchQA — actualité 2",
+      "language": "fr",
+      "domain": "Actualités et société",
+      "document_type": "Extrait d’actualité avec question associée",
+      "source": {
+        "dataset": "CATIE-AQ/frenchQA",
+        "url": "https://huggingface.co/datasets/CATIE-AQ/frenchQA",
+        "file": "data/validation-00000-of-00001.parquet",
+        "revision": "39b678ad23eef447fb6eda390b17388ae8457718",
+        "split": "validation",
+        "language": "fr",
+        "license": "CC BY 4.0",
+        "local_file": "frenchqa_validation.parquet"
+      },
+      "source_row": "200",
+      "upstream_source": "lincoln/newsquadfr"
+    },
+    {
+      "file": "fr/news/frenchqa_actualite_3.txt",
+      "sha256": "08d9a4e019a7f07606773a0a671c83e85e8d60b733a4ac821a7eb4e2258be8bc",
+      "word_count": 87,
+      "title": "FrenchQA — actualité 3",
+      "language": "fr",
+      "domain": "Actualités et société",
+      "document_type": "Extrait d’actualité avec question associée",
+      "source": {
+        "dataset": "CATIE-AQ/frenchQA",
+        "url": "https://huggingface.co/datasets/CATIE-AQ/frenchQA",
+        "file": "data/validation-00000-of-00001.parquet",
+        "revision": "39b678ad23eef447fb6eda390b17388ae8457718",
+        "split": "validation",
+        "language": "fr",
+        "license": "CC BY 4.0",
+        "local_file": "frenchqa_validation.parquet"
+      },
+      "source_row": "500",
+      "upstream_source": "lincoln/newsquadfr_v2"
+    },
+    {
+      "file": "fr/news/frenchqa_actualite_4.txt",
+      "sha256": "7a63f44f0b774f274652da3a1c5011c69ceb1cdbef14c1ab59c00238b9422541",
+      "word_count": 67,
+      "title": "FrenchQA — actualité 4",
+      "language": "fr",
+      "domain": "Actualités et société",
+      "document_type": "Extrait d’actualité avec question associée",
+      "source": {
+        "dataset": "CATIE-AQ/frenchQA",
+        "url": "https://huggingface.co/datasets/CATIE-AQ/frenchQA",
+        "file": "data/validation-00000-of-00001.parquet",
+        "revision": "39b678ad23eef447fb6eda390b17388ae8457718",
+        "split": "validation",
+        "language": "fr",
+        "license": "CC BY 4.0",
+        "local_file": "frenchqa_validation.parquet"
+      },
+      "source_row": "800",
+      "upstream_source": "lincoln/newsquadfr_v2"
+    },
+    {
+      "file": "fr/legal/amf_v2_7fe23a191b.txt",
+      "sha256": "0a172046c7de8e77d60018acf94d522398ec7564b0ad15106410ec434443d94d",
+      "word_count": 598,
+      "title": "Réglementation financière — 7fe23a191b",
+      "language": "fr",
+      "domain": "Réglementation financière",
+      "document_type": "Document juridique ou réglementaire",
+      "source": {
+        "dataset": "finaleads/french-corpus-llm-sample",
+        "url": "https://huggingface.co/datasets/finaleads/french-corpus-llm-sample",
+        "file": "sample.jsonl",
+        "revision": "5cc70de432f485775b0506ad38edf1c6cdb9049a",
+        "split": "échantillon",
+        "language": "fr",
+        "license": "Etalab-2.0",
+        "local_file": "french_legal_sample.jsonl"
+      },
+      "source_row": "7fe23a191b2cfdd73d5b6a971dc71393f107d616",
+      "upstream_source": "amf_v2",
+      "upstream_url": "https://www.amf-france.org/fr/eli/fr/aai/amf/rg/article/313-19/20221122/notes"
+    },
+    {
+      "file": "fr/legal/bofip_b5523a42f9.txt",
+      "sha256": "6b0737104d3b8636f2c49943f29ce38fd60695e6922ba30bd38f0b9aea72aa01",
+      "word_count": 1053,
+      "title": "Fiscalité — b5523a42f9",
+      "language": "fr",
+      "domain": "Fiscalité",
+      "document_type": "Document juridique ou réglementaire",
+      "source": {
+        "dataset": "finaleads/french-corpus-llm-sample",
+        "url": "https://huggingface.co/datasets/finaleads/french-corpus-llm-sample",
+        "file": "sample.jsonl",
+        "revision": "5cc70de432f485775b0506ad38edf1c6cdb9049a",
+        "split": "échantillon",
+        "language": "fr",
+        "license": "Etalab-2.0",
+        "local_file": "french_legal_sample.jsonl"
+      },
+      "source_row": "b5523a42f970f490f6f79e6a0ff8802bc2079b4c",
+      "upstream_source": "bofip",
+      "upstream_url": "https://bofip.impots.gouv.fr/bofip/936-PGP.html/identifiant=BOI-TVA-CHAMP-30-30-20-40-20120912"
+    },
+    {
+      "file": "fr/legal/jade_1b8ed4aa8e.txt",
+      "sha256": "b32b1d6509d3ccb6d58f8e4f17a2035248e1ae8c80f42b0081cac47fdf302036",
+      "word_count": 662,
+      "title": "Droit administratif — 1b8ed4aa8e",
+      "language": "fr",
+      "domain": "Droit administratif",
+      "document_type": "Document juridique ou réglementaire",
+      "source": {
+        "dataset": "finaleads/french-corpus-llm-sample",
+        "url": "https://huggingface.co/datasets/finaleads/french-corpus-llm-sample",
+        "file": "sample.jsonl",
+        "revision": "5cc70de432f485775b0506ad38edf1c6cdb9049a",
+        "split": "échantillon",
+        "language": "fr",
+        "license": "Etalab-2.0",
+        "local_file": "french_legal_sample.jsonl"
+      },
+      "source_row": "1b8ed4aa8eb9f71103603737d934a274c8ffea71",
+      "upstream_source": "jade",
+      "upstream_url": "https://www.legifrance.gouv.fr/ceta/id/CETATEXT000018003050"
+    },
+    {
+      "file": "fr/legal/kali_3fa8599ccc.txt",
+      "sha256": "5d458aa8fde0c5685100c640aa7c8cf54817075ce47a1fbdfae7ddd57cf8be31",
+      "word_count": 530,
+      "title": "Droit du travail — 3fa8599ccc",
+      "language": "fr",
+      "domain": "Droit du travail",
+      "document_type": "Document juridique ou réglementaire",
+      "source": {
+        "dataset": "finaleads/french-corpus-llm-sample",
+        "url": "https://huggingface.co/datasets/finaleads/french-corpus-llm-sample",
+        "file": "sample.jsonl",
+        "revision": "5cc70de432f485775b0506ad38edf1c6cdb9049a",
+        "split": "échantillon",
+        "language": "fr",
+        "license": "Etalab-2.0",
+        "local_file": "french_legal_sample.jsonl"
+      },
+      "source_row": "3fa8599ccc9c13bcd733e15ccacb521144d1e908",
+      "upstream_source": "kali",
+      "upstream_url": "https://www.legifrance.gouv.fr/conv_coll/id/KALIARTI000039178966"
+    }
+  ]
+}

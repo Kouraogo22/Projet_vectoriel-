@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue, PointStruct
@@ -47,6 +48,43 @@ class VectorStore:
             if payload.get("document_id"):
                 documents.setdefault(payload["document_id"], {key: payload.get(key) for key in ("document_id", "title", "category", "source")})
         return list(documents.values())
+
+    def get_document_content(self, document_id: str) -> dict | None:
+        """Reconstruit un document à partir de ses passages stockés dans Qdrant."""
+        records, _ = self.client.scroll(
+            collection_name=self.collection_name,
+            scroll_filter=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]),
+            with_payload=True,
+            with_vectors=False,
+            limit=1000,
+        )
+        if not records:
+            return None
+
+        payloads = sorted(
+            (record.payload or {} for record in records),
+            key=lambda payload: int(payload.get("chunk_index", 0)),
+        )
+        first = payloads[0]
+        return {
+            "document_id": document_id,
+            "title": first.get("title") or "Document sans titre",
+            "category": first.get("category"),
+            "source": first.get("source"),
+            "original_filename": first.get("original_filename") or Path(str(first.get("source") or document_id)).name,
+            "content": "\n\n".join(str(payload.get("text", "")) for payload in payloads),
+            "chunks_indexed": len(payloads),
+        }
+
+    def update_document_storage(self, document_id: str, source: str, original_filename: str) -> None:
+        """Met à jour le chemin de stockage associé à tous les passages d'un document."""
+        selector = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))])
+        self.client.set_payload(
+            collection_name=self.collection_name,
+            payload={"source": source, "original_filename": original_filename},
+            points=selector,
+            wait=True,
+        )
 
     def delete_document(self, document_id: str) -> None:
         selector = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))])

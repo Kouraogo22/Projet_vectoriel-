@@ -10,6 +10,17 @@ st.caption("Interrogez les documents indexés à partir de leur sens.")
 st.session_state.setdefault("search_results", [])
 st.session_state.setdefault("last_search_query", "")
 
+DEFAULT_DOCUMENT_CATEGORIES = [
+    "Actualités",
+    "Droit et réglementation",
+    "Économie et entreprises",
+    "Éducation",
+    "Informatique et technologies",
+    "Santé et recherche biomédicale",
+    "Sciences et technologies",
+    "Sport",
+]
+
 
 @st.cache_data(ttl=60)
 def fetch_documents() -> list[dict]:
@@ -22,16 +33,93 @@ def reset_result_filters() -> None:
     for key in ("result_min_score", "result_categories", "result_documents", "result_text"):
         st.session_state.pop(key, None)
 
+
+@st.cache_data(ttl=60)
+def fetch_document_content(document_id: str) -> dict:
+    response = requests.get(f"{API_URL}/documents/{document_id}/content", timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+@st.dialog("Consulter le document", width="large", icon=":material/article:")
+def open_document_dialog(result: dict) -> None:
+    """Affiche le texte complet reconstitué du document sélectionné."""
+    document_id = result["document_id"]
+    loading_slot = st.empty()
+    try:
+        with loading_slot.container():
+            with st.status("Chargement du document indexé...", expanded=True) as status:
+                st.write("Récupération des passages dans la base vectorielle.")
+                document = fetch_document_content(document_id)
+                st.write("Reconstitution du contenu dans son ordre d'indexation.")
+                status.update(label="Document prêt à consulter", state="complete", expanded=False)
+        loading_slot.empty()
+    except requests.RequestException as exc:
+        loading_slot.empty()
+        detail = exc.response.text if exc.response is not None else str(exc)
+        st.error(f"Impossible d'ouvrir ce document : {detail}")
+        return
+
+    st.subheader(document["title"])
+    metadata = [f"{document['chunks_indexed']} passage(s) indexé(s)"]
+    if document.get("category"):
+        metadata.insert(0, f"Catégorie : {document['category']}")
+    st.caption(" · ".join(metadata))
+    if document.get("source"):
+        st.caption(f"Source indexée : {document['source']}")
+
+    if document["original_available"]:
+        st.link_button(
+            "Télécharger le fichier original",
+            url=f"{API_URL}/documents/{document_id}/download",
+            icon=":material/download:",
+            type="primary",
+        )
+    else:
+        st.info("Le fichier original n'est pas disponible ; le texte indexé reste téléchargeable ci-dessous.")
+
+    st.download_button(
+        "Télécharger le texte indexé",
+        data=document["content"],
+        file_name=f"{document_id}.txt",
+        mime="text/plain",
+        icon=":material/download:",
+        width="content",
+    )
+    st.text_area(
+        "Contenu du document indexé",
+        value=document["content"],
+        height=480,
+        disabled=True,
+    )
+
 @st.dialog("Ajouter un document", width="large", icon=":material/upload_file:")
 def import_document_dialog() -> None:
     st.caption("Formats acceptés : PDF, DOCX, TXT et Markdown.")
+    try:
+        existing_categories = [
+            document["category"]
+            for document in fetch_documents()
+            if document.get("category")
+        ]
+    except requests.RequestException:
+        existing_categories = []
+    category_options = sorted(set(DEFAULT_DOCUMENT_CATEGORIES + existing_categories))
+
     with st.form("import_document", clear_on_submit=True):
         uploaded_file = st.file_uploader(
             "Document à indexer",
             type=["pdf", "docx", "txt", "md"],
         )
         document_title = st.text_input("Titre du document (facultatif)")
-        document_category = st.text_input("Catégorie (facultatif)")
+        document_category = st.selectbox(
+            "Catégorie du document",
+            options=category_options,
+            index=None,
+            placeholder="Choisir ou saisir une catégorie",
+            accept_new_options=True,
+            help="La catégorie servira aux filtres avant et après la recherche.",
+        )
         import_submitted = st.form_submit_button(
             "Indexer le document",
             type="primary",
@@ -43,6 +131,9 @@ def import_document_dialog() -> None:
     if uploaded_file is None:
         st.warning("Sélectionnez un document avant de lancer l'indexation.")
         return
+    if not document_category or not document_category.strip():
+        st.warning("Choisissez ou saisissez une catégorie avant de lancer l'indexation.")
+        return
 
     status = st.status("Préparation de l'indexation...", expanded=True)
     try:
@@ -51,8 +142,7 @@ def import_document_dialog() -> None:
             data = {}
             if document_title.strip():
                 data["title"] = document_title.strip()
-            if document_category.strip():
-                data["category"] = document_category.strip()
+            data["category"] = document_category.strip()
             files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
             st.write("Envoi du document à l'API et création des embeddings.")
             response = requests.post(f"{API_URL}/documents", files=files, data=data, timeout=120)
@@ -206,10 +296,16 @@ if results:
     if not refined_results:
         st.warning("Aucun résultat ne correspond aux filtres appliqués.")
     for index, result in enumerate(refined_results, 1):
-        st.subheader(f"Résultat {index} — score : {result['score']:.4f}")
-        st.write(result["text"])
-        category_label = result.get("category") or "Sans catégorie"
-        st.caption(f"Document : {result['title']} · Catégorie : {category_label}")
-        st.divider()
+        with st.container(border=True):
+            st.subheader(f"Résultat {index} — score : {result['score']:.4f}")
+            st.write(result["text"])
+            category_label = result.get("category") or "Sans catégorie"
+            st.caption(f"Document : {result['title']} · Catégorie : {category_label}")
+            if st.button(
+                "Ouvrir le document",
+                key=f"open_document_{result['passage_id']}",
+                icon=":material/open_in_new:",
+            ):
+                open_document_dialog(result)
 elif st.session_state.last_search_query:
     st.warning("Aucun résultat trouvé pour cette requête et les filtres appliqués.")

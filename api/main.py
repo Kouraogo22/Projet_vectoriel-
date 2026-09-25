@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, HTTPException, Response
 from api.routes import documents, search
 from src.config import settings
 from src.database import VectorStore
@@ -22,7 +22,15 @@ def favicon() -> Response:
 
 @app.get("/health", tags=["Santé"])
 def health() -> dict[str, str]:
-    return {"status": "ok", "collection": settings.collection_name}
+    try:
+        collection_exists = app.state.store.client.collection_exists(settings.collection_name)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="La base vectorielle est indisponible.") from exc
+    return {
+        "status": "ok",
+        "collection": settings.collection_name,
+        "collection_status": "available" if collection_exists else "not_created",
+    }
 
 app.include_router(search.router)
 app.include_router(documents.router)

@@ -13,13 +13,21 @@ class VectorStore:
     def ensure_collection(self, dimension: int) -> None:
         if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(self.collection_name, vectors_config=vector_params(dimension))
+            return
+        configured_vectors = self.client.get_collection(self.collection_name).config.params.vectors
+        configured_dimension = getattr(configured_vectors, "size", None)
+        if configured_dimension is not None and int(configured_dimension) != dimension:
+            raise ValueError(
+                f"La collection utilise des vecteurs de dimension {configured_dimension}, "
+                f"mais le modèle courant produit une dimension {dimension}."
+            )
 
     def upsert_passages(self, passages: Sequence[dict], vectors: Sequence[Sequence[float]]) -> None:
         if len(passages) != len(vectors):
             raise ValueError("Chaque passage doit posséder un vecteur.")
         points = [PointStruct(id=str(uuid5(NAMESPACE_URL, p["passage_id"])), vector=list(v), payload=p) for p, v in zip(passages, vectors)]
-        if points:
-            self.client.upsert(collection_name=self.collection_name, points=points, wait=True)
+        for start in range(0, len(points), 128):
+            self.client.upsert(collection_name=self.collection_name, points=points[start:start + 128], wait=True)
 
     def search(
         self,
@@ -41,7 +49,7 @@ class VectorStore:
         return self.client.query_points(collection_name=self.collection_name, query=list(query_vector), query_filter=query_filter, limit=limit, with_payload=True).points
 
     def list_documents(self) -> list[dict]:
-        records, _ = self.client.scroll(self.collection_name, with_payload=True, with_vectors=False, limit=1000)
+        records = self._scroll_all()
         documents = {}
         for record in records:
             payload = record.payload or {}
@@ -51,12 +59,8 @@ class VectorStore:
 
     def get_document_content(self, document_id: str) -> dict | None:
         """Reconstruit un document à partir de ses passages stockés dans Qdrant."""
-        records, _ = self.client.scroll(
-            collection_name=self.collection_name,
-            scroll_filter=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]),
-            with_payload=True,
-            with_vectors=False,
-            limit=1000,
+        records = self._scroll_all(
+            Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))])
         )
         if not records:
             return None
@@ -72,16 +76,53 @@ class VectorStore:
             "category": first.get("category"),
             "source": first.get("source"),
             "original_filename": first.get("original_filename") or Path(str(first.get("source") or document_id)).name,
-            "content": "\n\n".join(str(payload.get("text", "")) for payload in payloads),
+            "storage_kind": first.get("storage_kind") or "unknown",
+            "content": self._merge_overlapping_chunks(
+                [str(payload.get("text", "")) for payload in payloads]
+            ),
             "chunks_indexed": len(payloads),
         }
 
-    def update_document_storage(self, document_id: str, source: str, original_filename: str) -> None:
+    @staticmethod
+    def _merge_overlapping_chunks(chunks: Sequence[str]) -> str:
+        """Reconstitue le texte sans répéter les mots communs aux passages voisins."""
+        if not chunks:
+            return ""
+        merged = chunks[0].split()
+        for chunk in chunks[1:]:
+            words = chunk.split()
+            max_overlap = min(len(merged), len(words), 256)
+            overlap = next(
+                (size for size in range(max_overlap, 0, -1) if merged[-size:] == words[:size]),
+                0,
+            )
+            merged.extend(words[overlap:])
+        return " ".join(merged)
+
+    def _scroll_all(self, scroll_filter: Filter | None = None) -> list:
+        """Parcourt toutes les pages Qdrant au lieu de tronquer les résultats."""
+        records = []
+        offset = None
+        while True:
+            page, next_offset = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=scroll_filter,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+                limit=256,
+            )
+            records.extend(page)
+            if next_offset is None:
+                return records
+            offset = next_offset
+
+    def update_document_storage(self, document_id: str, source: str, original_filename: str, storage_kind: str) -> None:
         """Met à jour le chemin de stockage associé à tous les passages d'un document."""
         selector = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))])
         self.client.set_payload(
             collection_name=self.collection_name,
-            payload={"source": source, "original_filename": original_filename},
+            payload={"source": source, "original_filename": original_filename, "storage_kind": storage_kind},
             points=selector,
             wait=True,
         )

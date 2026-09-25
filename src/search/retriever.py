@@ -17,6 +17,7 @@ class SemanticRetriever:
         category: str | None = None,
         source: str | Path | None = None,
         original_filename: str | None = None,
+        storage_kind: str = "original",
     ) -> tuple[str, int]:
         path = Path(file_path)
         text = clean_text(extract_text(path))
@@ -25,11 +26,20 @@ class SemanticRetriever:
         stored_source = Path(source) if source is not None else path
         document_id = str(uuid5(NAMESPACE_URL, str(stored_source.resolve())))
         chunks = split_into_chunks(text, settings.chunk_size, settings.chunk_overlap)
-        passages = [{"passage_id": f"{document_id}_chunk_{index:04d}", "document_id": document_id, "chunk_index": index, "text": chunk, "title": title or path.stem, "category": category, "source": str(stored_source), "original_filename": original_filename or stored_source.name, "language": "fr"} for index, chunk in enumerate(chunks)]
+        language = self._detect_language(text)
+        passages = [{"passage_id": f"{document_id}_chunk_{index:04d}", "document_id": document_id, "chunk_index": index, "text": chunk, "title": title or path.stem, "category": category, "source": str(stored_source), "original_filename": original_filename or stored_source.name, "storage_kind": storage_kind, "language": language} for index, chunk in enumerate(chunks)]
         vectors = self.encoder.encode([p["text"] for p in passages])
         self.store.ensure_collection(self.encoder.dimension)
         self.store.upsert_passages(passages, vectors)
         return document_id, len(passages)
+
+    @staticmethod
+    def _detect_language(text: str) -> str:
+        """Détermine simplement si le contenu est plutôt français ou anglais."""
+        words = {word.strip(".,;:!?()[]{}\"'«»").casefold() for word in text.split()[:2000]}
+        french_markers = {"le", "la", "les", "des", "une", "dans", "avec", "pour", "est", "sont"}
+        english_markers = {"the", "and", "of", "to", "in", "with", "for", "is", "are", "from"}
+        return "en" if len(words & english_markers) > len(words & french_markers) else "fr"
 
     def search(
         self,

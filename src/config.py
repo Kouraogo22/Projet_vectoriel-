@@ -13,5 +13,6 @@ class Settings:
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
     chunk_size: int = int(os.getenv("CHUNK_SIZE", "120"))
     chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP", "20"))
+    max_upload_size_mb: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "100"))
 
 settings = Settings()

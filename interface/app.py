@@ -1,8 +1,11 @@
 import os
+from urllib.parse import quote
 import requests
 import streamlit as st
 
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", API_URL)
+MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "100"))
 st.set_page_config(page_title="Recherche sémantique", layout="wide")
 st.title("Recherche sémantique de documents")
 st.caption("Interrogez les documents indexés à partir de leur sens.")
@@ -22,7 +25,7 @@ DEFAULT_DOCUMENT_CATEGORIES = [
 ]
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60, max_entries=4)
 def fetch_documents() -> list[dict]:
     response = requests.get(f"{API_URL}/documents", timeout=20)
     response.raise_for_status()
@@ -34,7 +37,7 @@ def reset_result_filters() -> None:
         st.session_state.pop(key, None)
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=60, max_entries=20)
 def fetch_document_content(document_id: str) -> dict:
     response = requests.get(f"{API_URL}/documents/{document_id}/content", timeout=30)
     response.raise_for_status()
@@ -65,18 +68,17 @@ def open_document_dialog(result: dict) -> None:
     if document.get("category"):
         metadata.insert(0, f"Catégorie : {document['category']}")
     st.caption(" · ".join(metadata))
-    if document.get("source"):
-        st.caption(f"Source indexée : {document['source']}")
+    st.caption(f"Fichier : {document['original_filename']}")
 
-    if document["original_available"]:
+    if document["original_available"] and not document.get("original_is_reconstructed", False):
         st.link_button(
             "Télécharger le fichier original",
-            url=f"{API_URL}/documents/{document_id}/download",
+            url=f"{PUBLIC_API_URL}/documents/{quote(document_id, safe='')}/download",
             icon=":material/download:",
             type="primary",
         )
     else:
-        st.info("Le fichier original n'est pas disponible ; le texte indexé reste téléchargeable ci-dessous.")
+        st.info("Le fichier original n'est pas disponible ; seul le texte reconstitué depuis l'index peut être téléchargé.")
 
     st.download_button(
         "Télécharger le texte indexé",
@@ -110,6 +112,7 @@ def import_document_dialog() -> None:
         uploaded_file = st.file_uploader(
             "Document à indexer",
             type=["pdf", "docx", "txt", "md"],
+            max_upload_size=MAX_UPLOAD_SIZE_MB,
         )
         document_title = st.text_input("Titre du document (facultatif)")
         document_category = st.selectbox(
@@ -143,7 +146,8 @@ def import_document_dialog() -> None:
             if document_title.strip():
                 data["title"] = document_title.strip()
             data["category"] = document_category.strip()
-            files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+            uploaded_file.seek(0)
+            files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
             st.write("Envoi du document à l'API et création des embeddings.")
             response = requests.post(f"{API_URL}/documents", files=files, data=data, timeout=120)
             response.raise_for_status()
@@ -227,6 +231,9 @@ if search_submitted and query.strip():
     except requests.RequestException as exc:
         status.update(label="Échec de la recherche", state="error", expanded=True)
         st.error(f"L'API est indisponible : {exc}")
+        st.session_state.search_results = []
+        st.session_state.last_search_query = query.strip()
+        reset_result_filters()
 elif search_submitted:
     st.warning("Saisissez une requête avant de lancer la recherche.")
 

@@ -37,18 +37,27 @@ def main() -> None:
 
         source = Path(str(document.get("source") or ""))
         original_name = document.get("original_filename") or source.name
-        if source.is_file() and source.suffix.lower() in ALLOWED_SUFFIXES:
+        already_managed = source.is_file() and source.resolve().is_relative_to(UPLOAD_DIR.resolve())
+        if already_managed:
+            destination = source
+            storage_kind = document.get("storage_kind") or (
+                "reconstructed" if source.name.endswith(f"{document_id}.txt") else "original"
+            )
+            original_name = document.get("original_filename") or source.name
+        elif source.is_file() and source.suffix.lower() in ALLOWED_SUFFIXES:
             destination = destination_for(document_id, original_name)
             if source.resolve() != destination.resolve():
                 copy2(source, destination)
             copied += 1
+            storage_kind = "original"
         else:
             destination = destination_for(document_id, f"{document_id}.txt")
             destination.write_text(document["content"], encoding="utf-8")
             original_name = destination.name
             reconstructed += 1
+            storage_kind = "reconstructed"
 
-        store.update_document_storage(document_id, str(destination), original_name)
+        store.update_document_storage(document_id, str(destination), original_name, storage_kind)
 
     print(f"Migration terminée : {copied} fichier(s) original(aux) copié(s), {reconstructed} fichier(s) texte reconstitué(s).")
 

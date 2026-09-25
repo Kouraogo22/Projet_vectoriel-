@@ -1,0 +1,15 @@
+.env
+.git
+.gitignore
+.pytest_cache
+.ipynb_checkpoints
+__pycache__
+*.py[cod]
+venv
+qdrant_storage
+data/raw
+data/processed
+data/.hf-cache
+data/uploads
+evaluation/results
+*.log

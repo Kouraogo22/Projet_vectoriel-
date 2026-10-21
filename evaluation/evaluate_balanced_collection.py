@@ -1,10 +1,15 @@
-"""Évaluation reproductible du corpus équilibré selon le protocole de soutenance.
+"""Évaluation historique du corpus équilibré avec un vecteur par document.
+
+La nouvelle expérience du chapitre 4 est exécutée par
+evaluate_selected_chunks.py, avec découpage à la taille sélectionnée et
+agrégation des scores des passages par document. Ce fichier conserve le
+protocole antérieur et fournit ses fonctions de requêtes et de métriques.
 
 Trois approches sont évaluées sur les mêmes 90 requêtes contrôlées :
 TF-IDF, recherche vectorielle Qdrant et recherche hybride. Chaque approche
 est mesurée sur l'ensemble du corpus puis avec un filtre de catégorie.
 Les résultats sont exportés dans evaluation/results et utilisés par le
-notebook notebooks/evaluation.ipynb.
+protocole historique (les notebooks actuels lisent chapter4_selected/).
 """
 from __future__ import annotations
 

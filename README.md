@@ -27,7 +27,22 @@ pytest
 
 ## Données et expérimentation
 
-Les expérimentations de recherche sémantique utilisent le corpus français **FQuADRetrieval**, téléchargé depuis Hugging Face dans `data/raw/fquad_retrieval`. Il contient 366 documents, 500 requêtes et 500 jugements de pertinence, ce qui permet de calculer Recall@k et MRR@k.
+La taille retenue est de **60 mots par passage**, dont **20 mots de chevauchement inclus** (pas de 40 mots). Le choix initial sur FQuADRetrieval est confirmé par la meilleure moyenne de MRR@10 en validation **bilingue français–anglais**, parmi 60, 90, 120, 180 et 240 mots. Cette extension locale réunit 309 documents français et 500 résumés anglais de PubMedQA, avec 100 questions de validation et 400 de test par langue. La question anglaise et sa réponse ne sont pas ajoutées au texte indexé.
+
+Les deux langues ont un poids égal dans la sélection. Le meilleur score anglais de validation est obtenu à 90 mots, mais 60 mots donne la meilleure moyenne bilingue. Les gains de MRR sur le test face à 120 mots ne sont pas statistiquement concluants : le choix repose sur la validation. Il ne s'agit pas d'un test de recherche interlangue.
+
+L'évaluation finale réindexe les **900 documents du corpus bilingue équilibré** en **3 926 passages**, puis compare TF-IDF, Qdrant et la recherche hybride sur les mêmes 90 requêtes contrôlées. Qdrant utilise le meilleur score de passage par document. Les requêtes reprennent le début des documents : ces résultats ne remplacent pas une évaluation avec des questions indépendantes.
+
+```bash
+python evaluation/evaluate_chunk_sizes.py
+python evaluation/evaluate_bilingual_chunk_sizes.py
+python evaluation/evaluate_selected_chunks.py
+python scripts/update_experiment_notebooks.py
+```
+
+La première commande reproduit l'étude française initiale. La deuxième reprend uniquement la comparaison bilingue en mémoire, à partir des fichiers Parquet locaux de FQuADRetrieval et PubMedQA et du modèle ; elle n'accède pas à Docker. Ses résultats sont dans `evaluation/results/chunk_sizes_bilingual/`.
+
+La troisième commande nécessite Qdrant sur le port 6333 et le corpus figé `evaluation/results/chapter4_selected/source_documents.json`, exporté depuis la collection historique `experiment_multicategory_900`. Elle crée une nouvelle collection sans supprimer les précédentes. Les résultats et paramètres historiques restent dans `evaluation/results/chunk_sizes/` et `evaluation/results/chapter4_selected/`. La confirmation bilingue a conservé 60 mots et **n'a pas relancé cette évaluation finale**. Le fichier `chunk_sizes_bilingual/verification_receipt.json` conserve les empreintes des manifestes concernés. Ces dossiers de résultats sont ignorés par Git.
 
 Lancez Jupyter depuis la racine du projet :
 
@@ -35,5 +50,7 @@ Lancez Jupyter depuis la racine du projet :
 jupyter notebook
 ```
 
-- `notebooks/exploration.ipynb` vérifie le corpus et affiche les résultats d'une recherche française.
-- `notebooks/evaluation.ipynb` produit les métriques et enregistre `evaluation/results/fquad_metrics.csv`.
+- `notebooks/exploration.ipynb` contrôle les 900 documents, les catégories et les passages réindexés.
+- `notebooks/evaluation.ipynb` vérifie et présente les résultats sauvegardés de la sélection et de l'évaluation finale.
+
+Les services définis dans Docker Compose sont Qdrant et l'API FastAPI. Streamlit, Jupyter et les scripts expérimentaux sont exécutés sur la machine hôte. La sélection utilise Qdrant en mémoire ; l'évaluation finale interroge le serveur Qdrant Docker.

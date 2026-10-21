@@ -1,4 +1,4 @@
-def split_into_chunks(text: str, chunk_size: int = 120, overlap: int = 20) -> list[str]:
+def split_into_chunks(text: str, chunk_size: int = 60, overlap: int = 20) -> list[str]:
     """Découpe un texte en passages de mots avec chevauchement."""
     if chunk_size < 1:
         raise ValueError("La taille d'un passage doit être positive.")

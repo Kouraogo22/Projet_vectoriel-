@@ -1,164 +1,69 @@
-"""Reconstruit et exécute les deux notebooks utilisés dans le chapitre 4."""
-from __future__ import annotations
+"""Execute notebooks auditing and visualizing the saved selected-size experiment.
 
-import sys
+Recompute retrieval with evaluation/evaluate_selected_chunks.py first. Notebook
+execution reads that frozen run so rebuilding the report does not rerun timings.
+"""
 from pathlib import Path
-
+import sys
 import nbformat as nbf
 from nbclient import NotebookClient
-
-
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOKS = ROOT / "notebooks"
 
 
-def code(source: str):
-    return nbf.v4.new_code_cell(source)
-
-
-def markdown(source: str):
-    return nbf.v4.new_markdown_cell(source)
-
-
-def save_and_execute(name: str, cells: list) -> None:
-    notebook = nbf.v4.new_notebook(
-        cells=cells,
-        metadata={
-            "kernelspec": {
-                "display_name": "Python (projet_vectoriel)",
-                "language": "python",
-                "name": "python3",
-            },
-            "language_info": {"name": "python", "version": sys.version.split()[0]},
-        },
-    )
-    path = NOTEBOOKS / name
-    nbf.write(notebook, path)
-    client = NotebookClient(notebook, timeout=600, kernel_name="python3", resources={"metadata": {"path": str(ROOT)}})
+def execute(name, cells):
+    notebook = nbf.v4.new_notebook(cells=cells, metadata={'kernelspec': {
+        'name': 'python3', 'display_name': 'Python', 'language': 'python'}})
+    client = NotebookClient(notebook, timeout=600, kernel_name='python3',
+                            resources={'metadata': {'path': str(ROOT)}})
     client.execute()
-    nbf.write(notebook, path)
-    print(f"Notebook exécuté : {path}")
+    nbf.write(notebook, ROOT/'notebooks'/name)
+    print('Executed', name, flush=True)
 
 
-def create_exploration_notebook() -> None:
-    save_and_execute(
-        "exploration.ipynb",
-        [
-            markdown(
-                "# Exploration du corpus équilibré\n\n"
-                "Ce notebook contrôle le corpus utilisé pour l'expérimentation : "
-                "**900 documents**, répartis dans **9 catégories de 100 documents**. "
-                "La collection Qdrant est explicitement fixée afin que l'analyse "
-                "ne dépende pas de la collection active de l'application."
-            ),
-            code(
-                "from pathlib import Path\n"
-                "import sys\n"
-                "import pandas as pd\n"
-                "import matplotlib.pyplot as plt\n\n"
-                "ROOT = Path.cwd()\n"
-                "if not (ROOT / 'src').exists():\n"
-                "    ROOT = ROOT.parent\n"
-                "sys.path.insert(0, str(ROOT))\n\n"
-                "from src.database import VectorStore\n\n"
-                "COLLECTION = 'experiment_multicategory_900'\n"
-                "store = VectorStore('http://localhost:6333', None, COLLECTION)\n"
-                "points, _ = store.client.scroll(COLLECTION, with_payload=True, with_vectors=False, limit=1000)\n"
-                "documents = pd.DataFrame([point.payload for point in points]).drop_duplicates('document_id')\n"
-                "documents = documents[['document_id', 'title', 'category', 'text', 'source']]\n"
-                "print(f'Collection analysée : {COLLECTION}')\n"
-                "print(f'Nombre de documents : {len(documents)}')\n"
-                "print(f'Nombre de catégories : {documents.category.nunique()}')"
-            ),
-            code(
-                "distribution = documents.category.value_counts().sort_index().rename('Documents')\n"
-                "display(distribution.to_frame())\n"
-                "assert len(documents) == 900\n"
-                "assert documents.category.nunique() == 9\n"
-                "assert distribution.eq(100).all()\n"
-                "print('Contrôle validé : 100 documents sont disponibles dans chaque catégorie.')"
-            ),
-            code(
-                "ax = distribution.plot.barh(figsize=(11, 5), color='#2878B5')\n"
-                "ax.set_xlabel('Nombre de documents')\n"
-                "ax.set_ylabel('Catégorie')\n"
-                "ax.set_title('Répartition équilibrée du corpus expérimental')\n"
-                "ax.bar_label(ax.containers[0], padding=3)\n"
-                "plt.xlim(0, 115)\n"
-                "plt.tight_layout()\n"
-                "plt.show()"
-            ),
-            code(
-                "documents[['document_id', 'category', 'title', 'source']].sort_values(['category', 'document_id']).head(18)"
-            ),
-            markdown(
-                "La répartition équilibrée évite qu'une catégorie surreprésentée "
-                "influence les mesures globales. Les contenus restent stockés dans "
-                "Qdrant sous forme de passages avec leurs métadonnées documentaires."
-            ),
-        ],
-    )
+def main():
+    md, code = nbf.v4.new_markdown_cell, nbf.v4.new_code_cell
+    setup = """from pathlib import Path
+import json
+import pandas as pd
+import matplotlib.pyplot as plt
+ROOT = Path.cwd()
+if not (ROOT / 'src').exists(): ROOT = ROOT.parent
+RESULTS = ROOT / 'evaluation/results/chapter4_selected'
+manifest = json.loads((RESULTS/'protocol_comparison_manifest.json').read_text())
+print('Collection :', manifest['collection'])
+print('Taille retenue :', manifest['chunk_size'], 'mots ; chevauchement inclus :', manifest['chunk_overlap'])
+"""
+    execute('exploration.ipynb', [md('# Corpus réindexé après sélection de la taille des passages\n\nContrôle du corpus figé et du manifeste des passages de la nouvelle expérience.'), code(setup), code("""documents = pd.DataFrame(json.loads((RESULTS/'source_documents.json').read_text()))
+passages = pd.read_csv(RESULTS/'passage_manifest.csv')
+assert len(documents)==900 and documents.document_id.is_unique
+assert passages.document_id.nunique()==900
+assert len(passages)==manifest['passages']
+distribution = documents.category.value_counts().sort_index().rename('Documents')
+assert distribution.eq(100).all() and len(distribution)==9
+display(distribution.to_frame())
+print(len(passages), 'passages ;', manifest['truncated_passages'], 'dépassent la limite de tokens.')
+"""),code("""ax=distribution.plot.barh(figsize=(11,5),color='#2878B5')
+ax.set_xlabel('Nombre de documents'); ax.set_ylabel('Catégorie')
+ax.set_title('Corpus réindexé : 900 documents, neuf catégories')
+ax.bar_label(ax.containers[0],padding=3)
+plt.xlim(0,115); plt.tight_layout(); plt.show()
+""")])
+    execute('evaluation.ipynb', [md('# Sélection de la taille puis évaluation finale\n\nLa taille est sélectionnée sur les 100 questions de validation de FQuADRetrieval. Les 400 questions réservées vérifient ce choix. La comparaison finale reprend ensuite les 900 documents et les 90 requêtes contrôlées, avec indexation réelle en passages.\n\nPour recalculer les mesures : `python evaluation/evaluate_chunk_sizes.py`, puis `python evaluation/evaluate_selected_chunks.py`. Ce notebook contrôle et affiche les résultats sauvegardés de cette exécution.'),code(setup),code("""selection = pd.read_csv(ROOT/'evaluation/results/chunk_sizes/validation_summary.csv')
+display(selection[['size','passages','truncated_pct','recall_10','mrr_10','index_s']].round(4))
+best=selection.sort_values(['mrr_10','recall_10','passages','size'],ascending=[False,False,True,True]).iloc[0]
+assert int(best['size'])==manifest['chunk_size']==60
+"""),code("""summary=pd.read_csv(RESULTS/'protocol_comparison_summary_metrics.csv')
+observations=pd.read_csv(RESULTS/'protocol_comparison_detailed_metrics.csv')
+assert len(observations)==90*3*2
+for _, group in observations.groupby(['Méthode','Scénario']): assert len(group)==90
+summary_at_10=summary[['Méthode','Scénario','Precision@10','Recall@10','MRR@10','nDCG@10','Temps (ms)']]
+display(summary_at_10.round(4))
+"""),code("""plot_data=summary[summary['Scénario']=='Sans filtre'].set_index('Méthode')[['Recall@10','MRR@10','nDCG@10']]
+ax=plot_data.plot.bar(figsize=(10,5),rot=0,ylim=(0,1.08),color=['#4C78A8','#F58518','#54A24B'])
+ax.set_ylabel('Valeur'); ax.set_title('Recherche documentaire après découpage à 60 mots')
+ax.legend(loc='lower right'); plt.tight_layout(); plt.show()
+"""),code("""category_metrics=pd.read_csv(RESULTS/'protocol_comparison_category_metrics_at_10.csv')
+display(category_metrics[(category_metrics['Méthode']=='Qdrant vectoriel') & (category_metrics['Scénario']=='Avec filtre de catégorie')][['Catégorie','Recall@10','MRR@10','nDCG@10']].round(4))
+"""),md('Les scores vectoriels sont agrégés par maximum des passages de chaque document. Les temps incluent l’encodage et la récupération exhaustive des passages : ils ne constituent pas une mesure de latence de l’interface. Les requêtes finales reprennent la première phrase des documents, ce qui favorise la recherche lexicale. Les résultats français de sélection ne prouvent pas une optimalité universelle du seuil retenu.')])
 
-
-def create_evaluation_notebook() -> None:
-    save_and_execute(
-        "evaluation.ipynb",
-        [
-            markdown(
-                "# Évaluation comparative : TF-IDF, Qdrant vectoriel et recherche hybride\n\n"
-                "L'évaluation porte sur le corpus équilibré de **900 documents**. "
-                "Elle compare les trois méthodes prévues par le protocole, sans filtre "
-                "puis avec filtre de catégorie. La combinaison hybride utilise "
-                "$0,5 \\times$ score TF-IDF normalisé et $0,5 \\times$ score vectoriel normalisé."
-            ),
-            code(
-                "from pathlib import Path\n"
-                "import sys\n"
-                "import pandas as pd\n"
-                "import matplotlib.pyplot as plt\n\n"
-                "ROOT = Path.cwd()\n"
-                "if not (ROOT / 'evaluation').exists():\n"
-                "    ROOT = ROOT.parent\n"
-                "sys.path.insert(0, str(ROOT))\n\n"
-                "from evaluation.evaluate_balanced_collection import main\n\n"
-                "main()"
-            ),
-            code(
-                "RESULTS = ROOT / 'evaluation' / 'results'\n"
-                "summary = pd.read_csv(RESULTS / 'protocol_comparison_summary_metrics.csv')\n"
-                "summary_at_10 = summary[['Méthode', 'Scénario', 'Precision@10', 'Recall@10', 'MRR@10', 'nDCG@10', 'Temps (ms)']].copy()\n"
-                "display(summary_at_10.round(4))"
-            ),
-            code(
-                "metric_columns = ['Precision@1', 'Precision@3', 'Precision@5', 'Precision@10', 'Recall@1', 'Recall@3', 'Recall@5', 'Recall@10', 'MRR@1', 'MRR@3', 'MRR@5', 'MRR@10', 'nDCG@1', 'nDCG@3', 'nDCG@5', 'nDCG@10']\n"
-                "display(summary[['Méthode', 'Scénario'] + metric_columns].round(4))"
-            ),
-            code(
-                "plot_data = summary[summary['Scénario'] == 'Sans filtre'].set_index('Méthode')[['Recall@10', 'MRR@10', 'nDCG@10']]\n"
-                "ax = plot_data.plot.bar(figsize=(10, 5), rot=0, ylim=(0, 1.08), color=['#4C78A8', '#F58518', '#54A24B'])\n"
-                "ax.set_ylabel('Valeur de la mesure')\n"
-                "ax.set_title('Comparaison des méthodes sans filtre à K = 10')\n"
-                "ax.legend(loc='lower right')\n"
-                "plt.tight_layout()\n"
-                "plt.show()"
-            ),
-            code(
-                "category_metrics = pd.read_csv(RESULTS / 'protocol_comparison_category_metrics_at_10.csv')\n"
-                "hybrid_by_category = category_metrics[category_metrics['Méthode'] == 'Recherche hybride'][['Scénario', 'Catégorie', 'Recall@10', 'MRR@10', 'nDCG@10']]\n"
-                "display(hybrid_by_category.round(4))"
-            ),
-            markdown(
-                "### Interprétation et limite\n\n"
-                "Les 90 requêtes sont obtenues à partir de la première phrase de dix "
-                "documents pertinents par catégorie. Elles constituent donc un protocole "
-                "contrôlé et reproductible, mais ne remplacent pas un jeu de requêtes "
-                "indépendantes formulées par des utilisateurs. Les résultats sont à lire "
-                "en tenant compte de cette proximité lexicale avec le corpus."
-            ),
-        ],
-    )
-
-
-if __name__ == "__main__":
-    create_exploration_notebook()
-    create_evaluation_notebook()
+if __name__=='__main__': main()

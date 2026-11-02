@@ -91,3 +91,16 @@ def test_reconstructed_text_is_not_presented_as_original(tmp_path, monkeypatch):
     assert content.json()["original_available"] is False
     assert content.json()["original_is_reconstructed"] is True
     assert download.status_code == 404
+
+
+def test_delete_rejects_stale_collection(tmp_path):
+    stored = tmp_path / 'document.txt'
+    stored.write_text('contenu')
+    app = FastAPI()
+    app.state.store = FakeStore(stored)
+    app.state.store.collection_name = 'new_index'
+    app.include_router(documents.router)
+    response = request(app, 'DELETE', '/documents/known?expected_collection=old_index')
+    assert response.status_code == 409
+    assert not app.state.store.deleted
+    assert stored.exists()

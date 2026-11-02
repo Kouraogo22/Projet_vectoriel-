@@ -15,3 +15,6 @@ qdrant_storage/
 
 # Résultats
 evaluation/results/*
+
+# Configuration active et suivi des réindexations
+data/index_state/

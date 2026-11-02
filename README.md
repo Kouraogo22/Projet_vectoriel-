@@ -54,3 +54,63 @@ jupyter notebook
 - `notebooks/evaluation.ipynb` vérifie et présente les résultats sauvegardés de la sélection et de l'évaluation finale.
 
 Les services définis dans Docker Compose sont Qdrant et l'API FastAPI. Streamlit, Jupyter et les scripts expérimentaux sont exécutés sur la machine hôte. La sélection utilise Qdrant en mémoire ; l'évaluation finale interroge le serveur Qdrant Docker.
+
+### Page de réindexation
+
+La navigation Streamlit propose **Recherche** et **Réindexation**. La seconde page
+reconstruit tous les documents de la collection active et affiche la progression,
+les erreurs, les passages tronqués et les documents reconstitués. Le traitement
+continue côté API lorsque l'utilisateur change de page. Son bilan est téléchargeable
+au format JSON ; une annulation est possible entre deux lots (le chargement initial
+du modèle ou un calcul en cours doit d'abord se terminer).
+
+Réglages disponibles : taille en mots, chevauchement inclus dans cette taille,
+nettoyage, modèle Sentence Transformers, normalisation, CPU/CUDA/MPS, taille des lots
+de calcul et d'envoi, limite de tokens, métrique Qdrant (cosinus, produit scalaire,
+Euclid, Manhattan), vecteurs sur disque, connexions et construction HNSW, seuils de
+recherche exhaustive et d'indexation. Les seuils Qdrant sont exprimés en Ko. La
+limite de tokens personnalisée ne peut pas dépasser celle du modèle. La dimension
+est détectée automatiquement. CUDA/MPS exigent le matériel et le runtime adaptés
+côté API ; l'image Docker fournie utilise PyTorch CPU. Un modèle absent du cache
+nécessite un téléchargement Hugging Face. Aucun code distant du modèle n'est autorisé.
+
+Les fichiers conservés dans `data/uploads` sont relus en priorité. Pour les anciens
+chemins hôte/Docker, leur nom est recherché dans ce dossier uniquement. Si l'original
+manque, la reconstitution depuis les passages est optionnelle et comptabilisée ;
+elle ne restaure pas des informations absentes de l'ancien index. On peut aussi
+choisir explicitement le texte indexé. Les fichiers non importés ne sont pas inclus.
+
+Chaque travail crée une nouvelle collection avec un suffixe unique. Elle devient
+active uniquement après traitement de tous les documents et vérification des
+comptages. Les identifiants et métadonnées documentaires sont conservés. Les
+recherches continuent sur l'ancien index pendant le travail ; les ajouts et
+suppressions via l'API répondent temporairement 409 pour stabiliser le corpus.
+Les écritures directes par scripts dans Qdrant doivent également être suspendues.
+Les prochains imports et recherches utilisent les paramètres du nouvel index.
+L'ancienne collection et les collections de travaux annulés/échoués sont conservées,
+ce qui nécessite de l'espace disque ; aucune suppression automatique n'est effectuée.
+
+`data/index_state/active.json` conserve la collection et ses paramètres, et
+`job.json` le dernier travail. Ce dossier est monté dans Docker et ignoré par Git.
+Ne pas le supprimer au redémarrage : il associe le bon modèle à la bonne collection.
+Un travail interrompu par l'arrêt de l'API est signalé au redémarrage et doit être
+relancé ; il ne reprend pas automatiquement à mi-parcours. Le service fonctionne
+avec **un seul processus Uvicorn**, comme dans le Dockerfile ; un verrou de processus
+empêche deux API d'utiliser le même dossier d'état simultanément.
+
+Routes : `GET /reindex` (configuration active et suivi), `POST /reindex`
+(paramètres validés, réponse 202), `POST /reindex/cancel` (demande d'annulation).
+Après une mise à jour du code : `docker compose up -d --build api`, puis actualiser
+Streamlit. La réindexation du corpus réel est lancée explicitement depuis sa page.
+
+### Liste et suppression des documents
+
+La page **Documents** affiche les titres, catégories et identifiants de l’index
+actif. La recherche par titre/identifiant et le filtre de catégorie réduisent la
+liste. Sélectionnez un ou plusieurs documents, cliquez sur **Supprimer la sélection**,
+puis confirmez la liste présentée avant de valider **Confirmer et supprimer**.
+La suppression retire les passages de l’index actif et le fichier géré dans
+`data/uploads` lorsqu’il existe. Elle ne purge pas les anciennes collections.
+Les suppressions sont bloquées pendant une réindexation ; une liste confirmée
+pour une autre collection active est également refusée. En cas d’échec partiel,
+le bilan distingue les suppressions réussies et celles non confirmées.

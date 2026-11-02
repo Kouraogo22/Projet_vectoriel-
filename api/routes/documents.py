@@ -1,10 +1,11 @@
 from pathlib import Path
 from uuid import uuid4
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 from api.models import DocumentContent, DocumentResponse, DocumentSummary
 from src.config import settings
+from api.routes.reindex import document_mutation
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 ALLOWED_SUFFIXES = {".pdf", ".docx", ".txt", ".md"}
@@ -23,7 +24,7 @@ def managed_upload_path(source: str | None) -> Path | None:
         return None
     return candidate
 
-@router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(document_mutation)])
 async def add_document(request: Request, file: UploadFile = File(...), title: str | None = Form(None), category: str | None = Form(None)) -> DocumentResponse:
     original_filename = Path(file.filename or "document").name
     suffix = Path(original_filename).suffix.lower()
@@ -111,8 +112,10 @@ def download_original(document_id: str, request: Request) -> FileResponse:
         raise HTTPException(status_code=404, detail="Le fichier original n'est pas disponible.")
     return FileResponse(path=file_path, filename=document["original_filename"])
 
-@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document(document_id: str, request: Request) -> None:
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(document_mutation)])
+def delete_document(document_id: str, request: Request, expected_collection: str | None = None) -> None:
+    if expected_collection is not None and expected_collection != request.app.state.store.collection_name:
+        raise HTTPException(status_code=409, detail="L’index actif a changé. Actualisez la liste avant de supprimer.")
     file_path = None
     pending_path = None
     try:

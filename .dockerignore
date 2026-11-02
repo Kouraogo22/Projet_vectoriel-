@@ -13,3 +13,6 @@ data/.hf-cache
 data/uploads
 evaluation/results
 *.log
+
+data/index_state
+documents_pedagogiques

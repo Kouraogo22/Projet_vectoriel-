@@ -4,15 +4,24 @@ from uuid import NAMESPACE_URL, uuid5
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue, PointStruct
 from .schema import vector_params
+from qdrant_client.models import Distance, VectorParams, HnswConfigDiff, OptimizersConfigDiff
+from src.indexing.options import IndexOptions
 
 class VectorStore:
-    def __init__(self, url: str, api_key: str | None, collection_name: str) -> None:
+    def __init__(self, url: str, api_key: str | None, collection_name: str, options: IndexOptions | None = None) -> None:
         self.client = QdrantClient(url=url, api_key=api_key)
         self.collection_name = collection_name
+        self.options = options or IndexOptions()
 
     def ensure_collection(self, dimension: int) -> None:
         if not self.client.collection_exists(self.collection_name):
-            self.client.create_collection(self.collection_name, vectors_config=vector_params(dimension))
+            options = getattr(self, "options", IndexOptions())
+            self.client.create_collection(
+                self.collection_name,
+                vectors_config=VectorParams(size=dimension, distance=Distance(options.distance), on_disk=options.on_disk),
+                hnsw_config=HnswConfigDiff(m=options.hnsw_m, ef_construct=options.ef_construct, full_scan_threshold=options.full_scan_threshold),
+                optimizers_config=OptimizersConfigDiff(indexing_threshold=options.indexing_threshold),
+            )
             return
         configured_vectors = self.client.get_collection(self.collection_name).config.params.vectors
         configured_dimension = getattr(configured_vectors, "size", None)
@@ -26,8 +35,9 @@ class VectorStore:
         if len(passages) != len(vectors):
             raise ValueError("Chaque passage doit posséder un vecteur.")
         points = [PointStruct(id=str(uuid5(NAMESPACE_URL, p["passage_id"])), vector=list(v), payload=p) for p, v in zip(passages, vectors)]
-        for start in range(0, len(points), 128):
-            self.client.upsert(collection_name=self.collection_name, points=points[start:start + 128], wait=True)
+        batch_size = getattr(self, "options", IndexOptions()).upload_batch_size
+        for start in range(0, len(points), batch_size):
+            self.client.upsert(collection_name=self.collection_name, points=points[start:start + batch_size], wait=True)
 
     def search(
         self,
@@ -78,19 +88,23 @@ class VectorStore:
             "original_filename": first.get("original_filename") or Path(str(first.get("source") or document_id)).name,
             "storage_kind": first.get("storage_kind") or "unknown",
             "content": self._merge_overlapping_chunks(
-                [str(payload.get("text", "")) for payload in payloads]
+                [str(payload.get("text", "")) for payload in payloads],
+                overlap=first.get("chunk_overlap"),
             ),
             "chunks_indexed": len(payloads),
         }
 
     @staticmethod
-    def _merge_overlapping_chunks(chunks: Sequence[str]) -> str:
+    def _merge_overlapping_chunks(chunks: Sequence[str], overlap: int | None = None) -> str:
         """Reconstitue le texte sans répéter les mots communs aux passages voisins."""
         if not chunks:
             return ""
         merged = chunks[0].split()
         for chunk in chunks[1:]:
             words = chunk.split()
+            if overlap is not None:
+                merged.extend(words[int(overlap):])
+                continue
             max_overlap = min(len(merged), len(words), 256)
             overlap = next(
                 (size for size in range(max_overlap, 0, -1) if merged[-size:] == words[:size]),

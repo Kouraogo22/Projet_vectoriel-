@@ -19,6 +19,7 @@ services:
       - qdrant
     volumes:
       - ./data/uploads:/app/data/uploads
+      - ./data/index_state:/app/data/index_state
       - huggingface_cache:/root/.cache/huggingface
 volumes:
   qdrant_storage:

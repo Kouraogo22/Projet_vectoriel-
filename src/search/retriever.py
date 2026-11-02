@@ -1,14 +1,15 @@
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
-from src.config import settings
+from src.indexing.options import IndexOptions
 from src.database import VectorStore
 from src.embeddings import EmbeddingEncoder
 from src.extraction import extract_text
 from src.preprocessing import clean_text, split_into_chunks
 
 class SemanticRetriever:
-    def __init__(self, store: VectorStore, encoder: EmbeddingEncoder) -> None:
+    def __init__(self, store: VectorStore, encoder: EmbeddingEncoder, options: IndexOptions | None = None) -> None:
         self.store, self.encoder = store, encoder
+        self.options = options or IndexOptions()
 
     def index_document(
         self,
@@ -20,15 +21,17 @@ class SemanticRetriever:
         storage_kind: str = "original",
     ) -> tuple[str, int]:
         path = Path(file_path)
-        text = clean_text(extract_text(path))
+        text = extract_text(path)
+        if self.options.clean_text:
+            text = clean_text(text)
         if not text:
             raise ValueError("Le document ne contient aucun texte indexable.")
         stored_source = Path(source) if source is not None else path
         document_id = str(uuid5(NAMESPACE_URL, str(stored_source.resolve())))
-        chunks = split_into_chunks(text, settings.chunk_size, settings.chunk_overlap)
+        chunks = split_into_chunks(text, self.options.chunk_size, self.options.chunk_overlap)
         language = self._detect_language(text)
-        passages = [{"passage_id": f"{document_id}_chunk_{index:04d}", "document_id": document_id, "chunk_index": index, "text": chunk, "title": title or path.stem, "category": category, "source": str(stored_source), "original_filename": original_filename or stored_source.name, "storage_kind": storage_kind, "language": language} for index, chunk in enumerate(chunks)]
-        vectors = self.encoder.encode([p["text"] for p in passages])
+        passages = [{"passage_id": f"{document_id}_chunk_{index:04d}", "document_id": document_id, "chunk_index": index, "text": chunk, "title": title or path.stem, "category": category, "source": str(stored_source), "original_filename": original_filename or stored_source.name, "storage_kind": storage_kind, "language": language, "chunk_overlap": self.options.chunk_overlap} for index, chunk in enumerate(chunks)]
+        vectors = self.encoder.encode([p["text"] for p in passages], batch_size=self.options.batch_size)
         self.store.ensure_collection(self.encoder.dimension)
         self.store.upsert_passages(passages, vectors)
         return document_id, len(passages)
